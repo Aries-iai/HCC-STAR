@@ -1,0 +1,41 @@
+### model
+model_name_or_path: xxx/Qwen3-32B
+push_to_hub: False
+
+### method
+stage: sft
+do_train: true
+finetuning_type: full
+deepspeed: LLaMA-Factory/examples/deepspeed/ds_z3_config.json
+### dataset
+dataset: concat_sft_0905
+template: qwen3
+cutoff_len: 4096
+overwrite_cache: true
+preprocessing_num_workers: 16
+
+### output
+output_dir: saved_models/hcc-clinreasoner-sft/
+logging_steps: 30
+save_steps: 100
+save_total_limit: 1
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: true
+
+### train
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 5.0e-6
+num_train_epochs: 3.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.0
+weight_decay: 0.0
+bf16: true
+ddp_timeout: 180000000
+
+### eval
+eval_strategy: "no"
+
+report_to: none
+

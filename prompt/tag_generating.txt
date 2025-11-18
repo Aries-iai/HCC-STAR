@@ -1,0 +1,62 @@
+"""# Instruction 
+    Suppose you are a clinical researcher. Now you will be given a reasoning process for treatment decision. What you need to do is to add labels before and after the key data. The specific labels and corresponding data content examples are as follows:
+        A. PS score: <ps>1</ps>
+        B. Child-Pugh grade: <child_pugh>A</child_pugh>
+        C. Whether there is extrahepatic metastasis: <metastasis>Yes</metastasis>, where the optional answer include:
+            1. '存在'
+            2. '无'
+        D. Whether cancer thrombus is visible: <cancer_thrombus>Yes</cancer_thrombus>, where the optional answer include:
+            1. '存在'
+            2. '无'
+        E. Number of tumors: <num_tumor>1</num_tumor>
+        F. Maximum tumor size: <tumor_size>30</tumor_size> (in mm)
+        G. CNLC staging: <cnlc></cnlc>, BCLC staging: <bclc></bclc> and TNM staging: <tnm></tnm> (You only use tags for the first correct judgment result of each stage. That is, do not add tags for excluded stages, and do not add tags for stages that have appeared. Please refer to the following examples for details.)
+        H. Suggested treatment: <treatment></treatment>, where the optional treatments include:
+            1. 手术切除
+            2. 消融治疗
+            3. 肝移植
+            4. 介入治疗
+            5. 介入治疗联合消融治疗
+            6. 手术切除联合消融治疗
+            7. 全身抗肿瘤治疗
+            8. 介入治疗联合全身抗肿瘤治疗
+            9. 放射治疗
+            10. 对症支持治疗
+            11. 姑息治疗
+        I. Treatment not suggested: <treatment_not_recommended></treatment_not_recommended>
+
+    Here is an excellent example:
+        '# 提取的关键证据\\n1. 患者为54岁男性，确诊为中分化肝细胞癌。\\n2. 肝右叶发现一处病灶，大小为3.9cm，病灶局限，无远处转移，无门静脉侵犯，无肝胆管扩张。\\n3. 病理诊断为肝细胞癌，中度分化，未发现明显神经侵犯；肿瘤切缘距离2cm，未突破被膜。\\n4. 实验室检查显示AFP升高（360 ng/mL）、白蛋白水平（3.5 g/dL）下降，总胆红素升高（34 μmol/L），提示Child-Pugh评分为B。\\n5. PS评分为1，无肝外转移，且无明显全身临床症状。\\n6. HBsAg阳性提示乙肝背景，HBcAg阴性。\\n\\n# 判断各个分期\\n1. CNLC：根据决策树，患者PS评分为1，Child-Pugh评分为B，无远处转移，肿瘤为单发且最大直径为3.9 cm＜5 cm，因此归类为CNLC <cnlc>Ib</cnlc>期。\\n2. BCLC：PS评分为1，Child-Pugh为B，排除晚期与终末期（BCLC C和D期）；肿瘤为单发，但直径为3.9 cm＞2 cm，不符合BCLC 0期。按照BCLC A期标准（单发或≤3个结节，每个结节≤3 cm，PS 0-1，Child-Pugh A-B），患者肿瘤超过3 cm，因此归为BCLC <bclc>A</bclc>期的高分期标准。\\n3. TNM：肿瘤为单发，无远处转移（M0）；无淋巴结转移（N0）；直径3.9 cm，无血管侵犯（T1b）。综合为T1bN0M0，对应TNM为<tnm>ⅠB</tnm>期。\\n\\n# 根据CNLC决策树选定的候选治疗方案\\n根据CNLC肝癌分期为Ib期，适宜的治疗方案包括：手术切除、消融治疗、介入治疗、介入+消融联合治疗，以及可能的肝移植。\\n\\n# 分析潜在候选方案\\n1. **手术切除**：患者为CNLC Ib期，根据指南“CNLC Ia期、Ib期及IIa期肝癌的首选治疗方式是手术切除（证据等级1，推荐A）”，患者符合手术切除的适应症。此外，患者肿瘤单发，Child-Pugh评分B，无明显门静脉高压，预期术后正常肝脏体积能够提供功能保障。因此手术切除是推荐的治疗方式。\\n\\n2. **消融治疗**：根据指南“CNLC Ia期及部分Ib期肝癌（即单个肿瘤，直径≤5 cm）的患者可采用消融治疗（证据等级1，推荐A）”。患者肿瘤位于右叶，且肿瘤直径符合标准，不接近肝门部或一、二级胆管。因此患者符合消融治疗适应症。但指南提示“对于直径≤3 cm肝癌，手术切除的总生存时间类似或稍优于消融治疗”，由于患者肿瘤直径接近5 cm，手术切除生存率较消融更具优势，优先推荐手术切除。\\n\\n3. **肝移植**：肝移植主要适用于肝功能失代偿、不适合手术切除或消融治疗的患者，以保证稀缺的供肝资源用之得当。患者为Child-Pugh B级，兼无其他失代偿症状（如顽固性腹水），并符合手术或消融治疗适应症，因此不优先考虑肝移植。\\n\\n4. **介入治疗（TACE/HAIC）**：根据指南，患者尚未表现多发肝癌或远处转移，且手术切除和消融治疗均可完全适配，因此介入治疗不作为首选方案。适用于不完全符合手术或其他局部治疗适应证时的替代治疗。\\n\\n5. **介入+消融联合治疗**：对于直径较大的Ib期肿瘤（如超过4 cm或多个瘤结节），介入+消融联合治疗常被推荐（证据等级2，推荐B）。然而，患者目前只有单发肿瘤，且直径小于4 cm，因此单一治疗即可满足需求，无需联合策略。\\n\\n# 综合分析\\n基于细节分析，手术切除、消融和肝移植均可考虑。然而，手术切除和消融治疗均完全符合患者的诊疗适应症，但相比于消融治疗，手术切除在更大直径（3-5 cm）肿瘤治疗上效果更优（证据等级1，推荐A）。由于患者并非肝功能失代偿，亦符合手术切除的条件，未表现肝移植的强适应症，因此肝移植非首选。\\n\\n最终，优先选择手术切除，其次是消融。介入和联合治疗不作为首选方式。排序为手术切除 > 消融治疗 > 介入治疗 > 联合治疗（介入+消融） > 肝移植。'
+# Output Format
+    Your output must conform to the following JSON format, which can be parsed by json.loads() . You cannot output anything other than JSON:
+    {{"thinking": <your-thinking-progress-on-how-to-add-tags>, "result":<reasoning-progress-after-adding-tags>}}
+# Input
+    '{INPUT}'
+# Hint
+    1. Your output needs to be in Chinese;
+    2. Some of the above information may not exist in the sample. In this case, you can skip this label;
+    3. Please note that <metastasis></metastasis> is only used to mark extrahepatic metastasis. This tag cannot be used for other metastasis (such as distant metastasis).
+    4. When describing metastasis and cancer thrombus conditions, words indicating the presence or absence of the condition should be placed between <metastasis></metastasis> or <cancer_thrombus></cancer_thrombus>. For example:
+        "患者无影像学显示的肝外转移及血管侵犯，故不考虑 Radiotherapy" should be "患者<metastasis>无</metastasis>影像学显示的肝外转移，也<cancer_thrombus>无</cancer_thrombus>血管侵犯，故不考虑<treatment_not_recommended>Radiotherapy</treatment_not_recommended>"
+    5. Some values in the labels may not conform to our format. You need to transform these data. For example:
+        "有一个肿瘤" should be changed to "有<num_tumor>1</num_tumor>个肿瘤"; 
+        "最大肿瘤大小为2.5cm" should be changed to "最大肿瘤大小为<tumor_size>25</tumor_size>mm";
+        "未发现肝外转移" should be changed to "<metastasis>无</metastasis>肝外转移";
+        "在影像学检查中未见肝外转移和血管侵犯" should be changed to "在影像学检查中<metastasis>无</metastasis>肝外转移，也<cancer_thrombus>无</cancer_thrombus>血管侵犯";
+        "TACE联合消融" should be changed to "<treatment>TACE plus ablation</treatment>"; (words between <treatment></treatment> should be English, following choices below:
+            1. 手术切除
+            2. 消融治疗
+            3. 肝移植
+            4. 介入治疗
+            5. 介入治疗联合消融治疗
+            6. 手术切除联合消融治疗
+            7. 全身抗肿瘤治疗
+            8. 介入治疗联合全身抗肿瘤治疗
+            9. 放射治疗
+            10. 对症支持治疗
+            11. 姑息治疗)
+    6. Your output must not contain anything other than the labeled inference process. 
+    7. Your task is only adding tag, you should keep orginal reasoning as much as possible. 
+    8. You can only make minor adjustments to the content if the added tags make the text illogical or unnatural, but you cannot change its meaning.
+    9. You are not allowed to omit the original reasoning process.
+"""

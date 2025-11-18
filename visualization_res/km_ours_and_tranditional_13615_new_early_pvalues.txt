@@ -1,0 +1,7 @@
+=== Log-rank p-values ===
+Overall (multi-group): p = 4.62818e-06
+
+Pairwise (raw | Bonferroni adjusted):
+BCLC vs CNLC: p = 0.0039716 | adj = 0.0119148
+OURS vs BCLC: p = 1.85378e-06 | adj = 5.56135e-06
+OURS vs CNLC: p = 0.0434253 | adj = 0.130276

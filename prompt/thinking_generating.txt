@@ -1,0 +1,172 @@
+prompt_score = """# Instruction
+    Imagine you are a senior hepatobiliary surgeon. You are given a series of relevant case data for a patient and are required to use this information to determine the most appropriate treatment for the patient.
+
+    The case information you are given includes:
+        1. Patient's basic information
+        2. Patient's laboratory test results
+        3. Patient's imaging test reports
+
+    The treatment options you are presented with include:
+        1. Surgical resection
+        2. Ablation
+        3. Liver transplantation
+        4. Interventional therapy
+        5. Interventional therapy plus ablation
+        6. Surgical resection plus ablation
+        7. Systemic anti-tumor therapy
+        8. Interventional therapy plus systemic anti-tumor therapy
+        9. Radiotherapy
+        10. Symptomatic support
+        11. Palliative care
+    * Hint: Interventional therapy include TACE, HAIC, Y-90 ...
+
+    In addition to assigning a recommendation score to each treatment option, you are required to provide your step-by-step reasoning. Specifically, this includes the following components:
+        1. Extracted key patient information (evidence) relevant to the decision
+        2. Determine the patient's CNLC, BCLC, and TNM stages based on providing decision tree
+        3. Alternative treatments selected using the decision tree (CNLC staging) in the CNLC guidelines
+        4. For each selected alternative, you are required to provide the following, based on the CNLC guidelines:
+            i) Whether the indication is met: Provide specific indicators that are met, what are the corresponding values (conditions), and what are the requirements?
+            ii) Whether the contraindications are violated: Provide specific indicators that are met, what are the corresponding values (conditions), and what are the violation thresholds?
+            iii) What information is needed for decision-making but is missing? Can it be reasonably inferred? Is it decisive evidence?
+        5. Comprehensively compare the analysis of each option and arrive at a final answer: Combining the judgments in points i-iv, provide reasons and assign a score for each.
+            An example of comparison: "根据 CNLC 决策树，手术切除、消融以及肝移植都可以进行考虑，我们进一步进行对比，在上一部分中，我们一次分析三种方案，发现患者并未违反这三种方案的任何禁忌，同时，也符合指南中的指征，所以无法排除任何一个方案；我们进一步进行思考，考虑到患者肿瘤数量为1，直径为10mm，小于 3cm，根据指南描述'对于直径≤3 cm 肝癌，手术切除的总体生存时间类似或稍优于消融治疗（证据等级 1，推荐 A）'，我们可以较大程度推荐手术切除，而非消融，然后我们再考虑肝移植，计算MELD分数，为10，较低，因此不优先考虑进行移植，而应该'保证宝贵的供肝资源得到公平合理应用、平衡有（或）无肿瘤患者预后差异的关键（证据等级 3，推荐 B）'，综上，我们的排序为手术切除>消融>肝移植"
+
+    You need to check the reasoning process:
+        1. Whether the 'Preliminary Decision Based on the CNLC Decision Tree' section includes all recommended treatment options for the corresponding CNLC stage;
+        2. Whether the 'Detailed Analysis of Each Potential Option' section includes an analysis of all recommended options in the 'Preliminary Decision Based on the CNLC Decision Tree' section;
+        3. Whether determination of CNLC, BCLC, and TNM staging is true.
+
+# Back Ground Knowledge
+    Here is the summary of decision tree of BCLC:
+        肝功能差（Child-Pugh 大于 C级）或PS >2？  
+            └─ 是 → D期  
+            └─ 否 → 有血管侵犯或远处转移？  
+                    └─ 是 → C期  
+                    └─ 否 → 肿瘤多发（>3个结节，或>=2个结节且其中任何结节>3 cm）？  
+                        └─ 是 → B期  
+                        └─ 否 → 是否为单发且 ≤2cm？  
+                                └─ 否 → A期（单个结节>2，或2-3个结节均<=3cm）  
+                                └─ 是 0期
+
+    Here is the summary of decision tree of TNM:
+        是否远处转移（M1）？  
+        └─ 是 → Ⅳ期
+        └─ 否 → 是否淋巴结转移（N1）？  
+                └─ 是 → ⅢB期
+                └─ 否（N0） → 根据T分期判定：
+                    ├─ T1a（单个 ≤2cm，无血管侵犯） → ⅠA期
+                    ├─ T1b（单个 >2cm，无血管侵犯） → ⅠB期
+                    ├─ T2（单个伴血管侵犯，或 多个 ≤5cm） → Ⅱ期
+                    ├─ T3（多个 >5cm，或主干血管侵犯） → ⅢA期
+                    └─ T4（邻近脏器侵犯/穿破脏器外包膜） → ⅣA期
+
+    Here is the summary of decision tree of CNLC:      
+        【Step 1: 基础条件筛查】
+        PS 3-4 OR Child-Pugh C → Stage IV (Symptomatic_support, Liver_transplantation, Palliative_care) 
+        PS 0-2 AND Child-Pugh A/B → 继续Step 2
+        
+        【Step 2: 肿瘤负荷分期】(前提: 无血管侵犯+无肝外转移)
+        ├ 单发≤5cm → Stage Ia
+        │ 治疗: Surgical_resection, Ablation, Liver_transplantation
+        ├ 单发>5cm → Stage Ib  
+        │ 治疗: Surgical_resection, Interventional therapy, Ablation, Interventional therapy_plus_ablation, 可能Liver_transplantation
+        ├ 2-3个且全部≤3cm → Stage IIa
+        │ 治疗: Surgical_resection, Interventional therapy, Surgical_resection_plus_ablation, Interventional therapy_plus_ablation, Liver_transplantation  
+        └ 2-3个任一>3cm OR ≥4个 → Stage IIb
+         治疗: Interventional therapy, Surgical_resection, Systemic_anti-tumor_therapy
+        
+        【Step 3: 侵犯转移评估】
+        ├ 有血管侵犯+无远处转移 → Stage IIIa
+        │ 治疗: Interventional therapy_plus_systemic_anti-tumor_therapy, Surgical_resection, Radiotherapy
+        └ 有肝外转移 → Stage IIIb
+         治疗: Systemic_anti-tumor_therapy, Interventional therapy, Radiotherapy
+        
+        【Step 4: 再次确认终末期】
+        PS 3-4 或者 Child-Pugh C → Stage IV (Symptomatic_support, Liver_transplantation, Palliative_care)
+    Here is the summary of Treatment part of CNLC guidance:
+    {reference}
+
+        
+# Output Format
+    Your output needs to be output in JSON format that can be parsed by json.loads() in python. The details are as follows:
+    {{"thinking": <Your-step-by-step-thinking-progress>,"check_for_thinking":<check-whether-all-corresponding-CNLC-suggested-treatments-are-mentioned-in-part-2-and-part-3-of-thinking-progress>,"scores": {{"Surgical_resection": <score-on-surgical_resection>, "Ablation": <score-on-ablation>, "Liver_transplantation": <score-on-liver_transplantation>, "Interventional_therapy": <score-on-Interventional_therapy>, "Interventional_therapy_plus_ablation": <score-on-Interventional_therapy-plus-ablation>, "Surgical_resection_plus_ablation": <score-on-surgical_resection_plus_ablation>, "Systemic_anti-tumor_therapy": <score-on-systemic_anti-tumor_therapy>, "Interventional_therapy_plus_systemic_anti-tumor_therapy": <score-on-Interventional_therapy_plus_systemic_anti_tumor_therapy>, "Radiotherapy": <score-on-radiotherapy>, "Symptomatic_support": <score-on-symptomatic_support>, "Palliative_care": <score-on-palliative_care>}}}}
+    Expression inside your 'thinking' part should be natural language but do not need to be structured format. 
+    Your thinking should include all the four part mentioned in 'Instruction', including:
+        1. Extracted key evidence
+        2. Alternative treatments selected using the decision tree (CNLC staging)
+        3. Detailed analysis on candidate treatments
+        4. Comprehensively compare the analysis of each option
+    Scores for each treatment should follow format like:
+        {{
+            "Indications": 1.0, # 1.0 代表完全符合, 0.0 代表完全不符合
+            "Not_Violate_Taboos": 1.0, # 1.0 代表完全不违背, 0.0 代表完全违背
+            "Level_of_Evidence": 1.0, # 1.0 代表证据等级 1, 0.0 代表 证据等级 5, -1 代表cnlc不推荐
+            "Level_of_Recommendation": # 1.0 代表cnlc推荐等级 A, 0.0 代表cnlc推荐等级 C, -1 代表cnlc不推荐
+            "Comprehensive_Score": 1.0 # 1.0 代表本模型最推荐, 0.0 代表本模型完全不推荐
+        }}
+    When comparing each candidate treatment, you should point out your evidence if you can, and also give corresponding level of evidence and grade of recommendation behind it.    
+
+# Example
+    Here are some good examples of ouput:
+    ## Example-1
+    {{"thinking": "# 感知与决策相关的所有关键信息
+            病理诊断明确为肝细胞癌，分化程度中等，肿瘤大小为27×25×20mm。
+            肿瘤切缘为阴性，切缘距离肿瘤最近处为3.5cm，未观察到肝被膜突破或大血管侵犯。
+            影像学显示肝左叶单发肿块，未见肝外转移及淋巴结增大，门静脉、肝静脉和胆管未出现受压或侵袭。
+            肝功能良好，Child-Pugh评分为A，实验室检查未显示明显异常。
+            患者一般情况良好，PS评分为1，无全身症状干扰患者接受治疗。 
+            AFP指标正常，且未观察到HBsAg和HBcAg的阳性表现。
+            没有骨、脑、肺及其他远处转移，肿瘤局限于肝内。
+            可见肿瘤数量为 1。
+            未见癌栓。
+        # 判断各个分期
+            CNLC: 根据决策树可知，现在 ps 分数为 1， child-pugh 等级为 A，影像学不可见癌栓，且未表现出远处转移，肿瘤可见 1 个，且最大直径为27mm<5cm，因此，该患者属于 CNLC Ia 期。
+            BCLC: 考虑到 ps 分数为 1，child-pugh 等级为 A，因此不属于晚期/终末期，同时未见血管侵犯、淋巴结转移、远处转移，因此排除 C/D 期。考虑到肿瘤为单个，且最大径 2.7 cm (<3 cm)。符合 BCLC A 期 的早期肿瘤标准（单发，或 ≤3个 ≤3 cm，PS 0–1，Child-Pugh A–B）。考虑是否可归入 BCLC 0 期：BCLC 0 期要求单发 ≤2 cm，本例肿瘤 2.7 cm > 2cm，因此不符合。综上，属于 BCLC A 期。
+            TNM: 首先判断 M 分期：因为无远处转移所以为M0。再判断 N 分期：未见淋巴结转移，因此为N0。对于 T 分期：因为为单个肿瘤，最大直径为27mm>20 mm(2cm) 且无血管侵犯，因此为T1b。综合判定为T1bN0M0，对应 ⅠB 期。
+        # 根据 CNLC 决策树进行初步决策
+            根据决策树可知，现在 ps 分数为 1， child-pugh 等级为 A，影像学不可见癌栓，且未表现出远处转移，肿瘤可见 1 个，且最大直径为27mm<5cm，因此，该患者属于 CNLC Ia 期，根据指南决策树，推荐治疗方案为: 手术切除, 消融治疗以及肝移植。
+        # 对于每个潜在方案的细节分析
+            1. 手术切除：根据指南可知手术切除的适应症包括 I a 期患者(CNLC Ⅰ a 期、Ⅰ b 期和Ⅱ a 期肝癌的首选治疗方式是手术切除)；同时，根据指南可知，手术切除术的要求是【保留足够体积且有功能的肝组织（有良好血供及良好的血液和胆汁回流）】，本患者的肿瘤大小较小，且其肝功能评分为child-pugh A级，因此可以进行手术切除。
+            2. 消融治疗：根据指南可知消融治疗的适应症包含 I a 期患者【消融治疗主要适用于 CNLC Ⅰ a 期及部分Ⅰ b期肝癌（即单个肿瘤、直径≤5 cm；或 2～3 个肿瘤、最大直径≤3 cm）】，同时，该患者并未违背其禁忌（例如，没有血管、胆管和邻近器官侵犯；病灶没有邻近肝门部或靠近一、二级胆管），因此可以进行消融治疗。
+            3. 肝移植：根据指南可知，其【适用于肝功能失代偿、不适合手术切除及消融治疗的小肝癌患者（证据等级 2，推荐 A）】，但是根据上面的分析可知，本患者适合手术与消融治疗，因此不考虑肝移植，因为根据指南所说：【合适的肝癌肝移植适应证是提高肝癌肝移植疗效、保证宝贵的供肝资源得到公平合理应用、平衡有（或）无肿瘤患者预后差异的关键（证据等级 3，推荐 B）】，因此应该把宝贵的供肝资源利用于更需要的患者的治疗中。
+
+        # 综合分析
+            根据 CNLC 决策树，手术切除、消融以及肝移植都可以进行考虑，我们进一步进行对比，在上一部分中，我们一次分析三种方案，发现患者并未违反这三种方案的任何禁忌，同时，也符合指南中手术切除和消融的适应症，但是因为可以通过手术或消融进行根治，因此肝移植可能并不合适，为了进一步地确保与分析，我们计算其MELD分数，为10，较低，确实病情较轻，并不那么强烈地需要进行肝移植，因此基于【保证宝贵的供肝资源得到公平合理应用、平衡有（或）无肿瘤患者预后差异的关键（证据等级 3，推荐 B）】，我们认为肝移植的推荐分数较低。对于剩下的手术切除和消融治疗方案，我们进一步进行思考，考虑到患者肿瘤数量为1，直径为27mm，小于 3cm，根据指南描述【对于直径≤3 cm 肝癌，手术切除的总体生存时间类似或稍优于消融治疗（证据等级 1，推荐 A）】，我们可以较大程度推荐手术切除，而非消融，综上，我们的排序为手术切除>消融治疗>肝移植。","scores":{{"Surgical_resection": {{"Indications": 1,"Not_Violate_Taboos": 1,"Level_of_Evidence": 1,"Level_of_Recommendation": 1,"Comprehensive_Score": 1}},"Ablation": {{"Indications": 1,"Not_Violate_Taboos": 1,"Level_of_Evidence": 0.9,"Level_of_Recommendation": 0.9,"Comprehensive_Score": 0.85}},"Liver_transplantation": {{"Indications": 0.5,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.6,"Level_of_Recommendation": 0.6,"Comprehensive_Score": 0.4}},"Interventional_therapy": {{"Indications": 0.7,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.7,"Level_of_Recommendation": 0.7,"Comprehensive_Score": 0.55}},"Interventional_therapy_plus_ablation": {{"Indications": 0.7,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.7,"Level_of_Recommendation": 0.7,"Comprehensive_Score": 0.5}},"Surgical_resection_plus_ablation": {{"Indications": 0.8,"Not_Violate_Taboos": 0.8,"Level_of_Evidence": 0.8,"Level_of_Recommendation": 0.8,"Comprehensive_Score": 0.65}},"Systemic_anti-tumor_therapy": {{"Indications": 0.4,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.6,"Level_of_Recommendation": 0.6,"Comprehensive_Score": 0.35}},"Interventional_therapy_plus_systemic_anti-tumor_therapy": {{"Indications": 0.5,"Not_Violate_Taboos": 0.8,"Level_of_Evidence": 0.5,"Level_of_Recommendation": 0.5,"Comprehensive_Score": 0.35}},"Radiotherapy": {{"Indications": 0.3,"Not_Violate_Taboos": 0.8,"Level_of_Evidence": 0.4,"Level_of_Recommendation": 0.4,"Comprehensive_Score": 0.2}},"Symptomatic_support": {{"Indications": 0.2,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.3,"Level_of_Recommendation": 0.3,"Comprehensive_Score": 0.15}},"Palliative_care": {{"Indications": 0.1,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.2,"Level_of_Recommendation": 0.2,"Comprehensive_Score": 0.1}}}}}}
+
+    ## Example-2
+    {{"thinking": "# 提取的关键证据
+            1. 该患者为48岁男性，确诊为中分化肝细胞癌，肝右叶可见病变4处，病灶最大直径为52mm；
+            2. 肝功能评分为Child-Pugh B；PS评分为1，无远处转移，无肝外血管侵犯，门静脉未见明显侵犯，为区域性肝癌。
+            3. AFP显著升高（421 ng/mL），HBsAg及HBcAg阳性，提示可能的乙肝相关肝癌背景。
+            4. 实验室检查显示白蛋白水平稍低（3.2），轻度高胆红素血症（总胆红素38 μmol/L），支持Child-Pugh B级评估。
+            5. 影像学检查明确显示肝右叶可见4处病灶，无邻近器官侵犯，总体病灶表现为“快进快出”增强特征，符合肝癌影像特征。
+            6. 无骨、脑、肺等远处转移，胸腔未见积液。
+        # 各个分期的判断
+            CNLC: 该患者PS评分为1，Child-Pugh B，且无远处转移，有4处可见病灶(>=4)，属于CNLC IIb期。
+            BCLC: 考虑到该患者PS评分为1，Child-Pugh分级为B，因此不属于晚期/终末期；同时未见血管侵犯、淋巴结转移及远处转移，因此可以排除C期和D期。接下来结合肿瘤负荷情况，该患者肝右叶存在4处病灶，且最大直径为52 mm，超过了早期阶段对单个或≤3个小结节的要求，因此不符合A期或0期标准。多发病灶（≥2个，且其中至少一个>3 cm）符合BCLC B期的特征。综上，该患者属于BCLC B期（中期）。
+            TNM: 首先判断M分期：无远处转移，因此为M0。再判断N分期：未见淋巴结转移，因此为N0。对于T分期：患者存在4处病灶，且最大直径为52 mm>50mm，属于“数量≥2，且至少一个>5 cm”，因此为T3。综合判定为T3N0M0，对应ⅢA期。
+        # 根据CNLC决策树选定的候选治疗方案
+            根据CNLC肝癌分期，该患者PS评分为1，Child-Pugh B，且无远处转移，有4处可见病灶(>=4)，属于CNLC IIb期。这种情况下，适宜的治疗包括：\\n1. 介入治疗（如TACE等）\\n2. 手术切除\\n3. 系统性抗肿瘤治疗\\n\\n
+        # 分析潜在候选方案
+            1. **手术切除**：患者为 CNLC IIb 期，因此根据 CNLC 指南首选并非肝切除，而是 TACE 等介入治疗方法。但影像学提示肿瘤在肝右叶内，根据指南【对于 CNLC Ⅱ b 期肝癌患者，若肿瘤局限在同一段或同侧半肝者，或可以同时行术中消融处理切除范围外的病灶；即使肿瘤数目＞3 个，经过 MDT 讨论，手术切除有可能获得比其他治疗更好的效果，也可以推荐行手术切除（证据等级 2，推荐 B）】，因此存在切除可能，但需要考虑剩余肝体积（FLR）。此方案存在一定适应性，但术后生存率降低，手术风险较高。
+            2. **介入治疗（TACE）**：根据指南【CNLC Ⅱ b、Ⅲ a 期肝癌患者，TACE 为首选治疗推荐】，可见符合 CNLC 指南介入治疗适应症。对于Child-Pugh B且无门静脉明显阻塞的患者，TACE是相对安全且获益明显的选择，可有效降低肿瘤负荷，减缓病情进展。同时根据指南【TACE，HAIC，放疗等局部治疗手段为初始不可切除肝癌患者创造手术切除机会，并且能够转化为生存获益（证据等级 3，推荐 B）】可见进行介入治疗也可能降低患者肿瘤负荷，若肿瘤应答良好，达到可切除标准，后续可序贯转化手术切除以进一步改善患者预后。
+            3. **系统性抗肿瘤治疗**：系统性治疗（如索拉非尼或免疫联合治疗）适用于晚期肝癌，无疑可以作为Child-Pugh B患者无法承担侵入性治疗时的选择（根据等级1，推荐A）。然而，单药治疗的效果相对有限。
+        # 综合分析
+            基于上述分析，因患者Child-Pugh B级，肝功能储备较低且无远处转移，而病灶已进入CNLC II b 阶段。同时，考虑到干预治疗应尽可能减少风险，单纯手术切除或联合治疗的风险显著较高。TACE及TACE联合系统治疗的策略尤其适用于这样的患者，具有降低肿瘤生物负荷并延长生存的益处。此外，由于中分化癌分期较高，结合患者个体情况，系统性治疗在后续疾病管理中的角色需重点考虑。同时，根据多项高级别临床研究（TALENTACE、CARES-005等），对于中晚期肝细胞癌，介入联合系统治疗方案，相较于单一治疗可提升ORR和远期预后。 建议在多学科团队（MDT）框架下探讨联合治疗的可行性。因此排序为：介入治疗 > 介入+系统治疗 > 系统性抗肿瘤治疗 > 手术切除。\\n","scores":{{"Surgical_resection": {{"Indications": 0.6,"Not_Violate_Taboos": 0.6,"Level_of_Evidence": 0.5,"Level_of_Recommendation": 0.5,"Comprehensive_Score": 0.6}},"Ablation": {{"Indications": 0.1,"Not_Violate_Taboos": 0.1,"Level_of_Evidence": 0.2,"Level_of_Recommendation": 0.1,"Comprehensive_Score": 0.15}},"Liver_transplantation": {{"Indications": 0.1,"Not_Violate_Taboos": 0.2,"Level_of_Evidence": 0.3,"Level_of_Recommendation": 0.3,"Comprehensive_Score": 0.25}},"Interventional_therapy": {{"Indications": 1,"Not_Violate_Taboos": 1,"Level_of_Evidence": 1,"Level_of_Recommendation": 1,"Comprehensive_Score": 1}},"Interventional_therapy_plus_ablation": {{"Indications": 0.1,"Not_Violate_Taboos": 0.1,"Level_of_Evidence": 0.4,"Level_of_Recommendation": 0.4,"Comprehensive_Score": 0.15}},"Surgical_resection_plus_ablation": {{"Indications": 0.6,"Not_Violate_Taboos": 0.4,"Level_of_Evidence": 0.3,"Level_of_Recommendation": 0.4,"Comprehensive_Score": 0.4}},"Systemic_anti-tumor_therapy": {{"Indications": 0.8,"Not_Violate_Taboos": 0.9,"Level_of_Evidence": 0.7,"Level_of_Recommendation": 0.7,"Comprehensive_Score": 0.75}},"Interventional_therapy_plus_systemic_anti-tumor_therapy": {{"Indications": 1,"Not_Violate_Taboos": 1,"Level_of_Evidence": 0.8,"Level_of_Recommendation": 0.8,"Comprehensive_Score": 0.9}},"Radiotherapy": {{"Indications": 0.4,"Not_Violate_Taboos": 0.6,"Level_of_Evidence": 0.4,"Level_of_Recommendation": 0.4,"Comprehensive_Score": 0.3}},"Symptomatic_support": {{"Indications": 0.5,"Not_Violate_Taboos": 0.8,"Level_of_Evidence": 0.4,"Level_of_Recommendation": 0.4,"Comprehensive_Score": 0.35}},"Palliative_care": {{"Indications": 0.3,"Not_Violate_Taboos": 0.8,"Level_of_Evidence": 0.2,"Level_of_Recommendation": 0.2,"Comprehensive_Score": 0.2}}}}}}
+    
+# Input
+{input_data}
+
+You have additional secret knowledge that you can refer to during generation but not during reasoning:
+{addictional_data}
+
+# Hint
+1. You can NOT mention words like 'real treatment', 'real survival status', 'real COD.to.site.recode', 'real Survival.months', 'actual treatment' in your output.
+2. You can NOT mention expression like 'the patient has survived for 25 months post-diagnosis', which means you have already know the patient's survival status before making the prediction.
+3. You can NOT mention abbreviation in the '# Input' section, such as 'mets.bone', 'ICD.O.3.Hist.behav', 'COD.to.site.recode' and 'Survival.months', you should use the full name of the abbreviation in your output, like 'There are no bone metastases'.
+4. You can NOT mention expression like 'The thinking process avoids referencing survival information explicitly', which means you have already know the patient's survival status before making the prediction.
+5. Your answer should be in Chinese.
+6. Your thinking output shows how you choose proper treatment.
+7. Your thought process needs to be as detailed as possible.
+8. 'scores' Must apper in your output JSON as a key!
+"""

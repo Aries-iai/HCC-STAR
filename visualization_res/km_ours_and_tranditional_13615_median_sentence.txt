@@ -1,0 +1,1 @@
+The hypothetical Kaplan–Meier OS curves showed that when HCC patients received treatment according to our model’s recommendations, the hypothetical median OS would be \textbf{\textit{51.00}} months, in contrast to \textit{29.00} and \textit{32.00} months when they received treatment according to the BCLC and CNLC treatment algorithm.
