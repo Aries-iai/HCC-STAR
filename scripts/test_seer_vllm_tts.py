@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 # vLLM service configuration
 OPENAI_API_KEY = "EMPTY"
-OPENAI_API_BASE = "http://0.0.0.0:5001/v1"
+OPENAI_API_BASE = "http://0.0.0.0:8000/v1"
 
 # Input and output file paths
-INPUT_FILE = "xxx"
-OUTPUT_FILE = "xxx"
+# INPUT_FILE = "xxx"
+# OUTPUT_FILE = "xxx"
 
 # Number of parallel workers
 MAX_WORKERS = 200
@@ -185,4 +185,12 @@ def generate_responses(json_path: str = INPUT_FILE, output_path: str = OUTPUT_FI
         raise
 
 if __name__ == "__main__":
+    parser.add_argument("--model", required=True, help="Model name for inference")
+    # parser.add_argument("--input", required=True, help="input JSONL file path")
+    parser.add_argument("--output", required=True, help="Output JSONL file path")
+    args = parser.parse_args()
+    # Input and output file paths
+    MODEL_FILE = args.model
+    INPUT_FILE = 'HCC-ClinReasoner/data/val_internal.jsonl'
+    OUTPUT_FILE = args.output
     generate_responses()
