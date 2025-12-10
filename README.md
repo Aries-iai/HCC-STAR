@@ -1,4 +1,4 @@
-# HCC-ClinReasoner
+# HCC-STAR
 
 A clinically aligned large language model specialized for hepatocellular carcinoma (HCC).  
 The model takes real-world Chinese or English EMR narrative text as input and directly outputs:
